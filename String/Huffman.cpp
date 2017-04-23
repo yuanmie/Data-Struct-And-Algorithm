@@ -66,19 +66,56 @@ public:
         root = pq.top();
         pq.pop();
 
-        debug();
-        string translate[256];
-        buildTransTable(translate, root, "");
 
-        for(int i = 0; i < len; i++){
-            cout << translate[key[i]] << endl;
-        }
+        translate = new string[R];
+        buildTransTable(translate, root, "");
     }
 
+    ~Huffman(){
+        //release huffman tree
+        releaseTree(root);
+        delete[] translate;
+    }
+
+
+
+    string compress(){
+        string result("");
+        int len = key.length();
+        for(int i = 0; i < len; i++){
+            result.append(translate[key[i]]);
+        }
+        return result;
+    }
+
+    string expand(string code){
+        string result("");
+        int codeLen = code.length();
+        int index = 0;
+        Node* node = root;
+        while(index < codeLen){
+            if(code[index] == '0'){
+                node = node->left;
+            }else if(code[index] == '1'){
+                node = node->right;
+            }else{
+                //error
+                cout << "error" << "\n";
+            }
+            if(node->isLeaf()){
+                result.append(string(1,node->content));
+                node = root;
+            }
+            ++index;
+        }
+        return result;
+    }
+
+
+private:
     void buildTransTable(string* trans, Node* node, string result){
         assert(node != NULL);
         if(node->isLeaf()){
-            cout << node->content << "   " << result << endl;
             trans[node->content] = result;
             return;
          }
@@ -86,28 +123,30 @@ public:
          buildTransTable(trans, node->right, result + "1");
     }
 
-    void debug(){
-        mydisplay(root);
-    }
-
-    void mydisplay(Node* node){
+    void releaseTree(Node* node){
         if(node == NULL) return;
-        mydisplay(node->left);
-        cout <<node->freq << " ---- " << node->content << endl;
-
-        mydisplay(node->right);
+        releaseTree(node->left);
+        releaseTree(node->right);
+        delete node;
     }
 
-
-private:
-
-
+    string *translate;
     Node* root;
     string key;
 };
 
 int main(){
     Huffman huff("abca");
-    Huffman h("it was the best fo times it was the worst of times\n");
+    cout << "the key is: abca" << endl;
+    string code = huff.compress();
+    cout << "after compress, the code is: " << code << endl;
+    string key = huff.expand(code);
+    cout <<"after express, the key is: " << key << endl;
+    Huffman h("it was the best of times it was the worst of times\n");
+    cout << "the key is: it was the best of times it was the worst of times\n" << endl;
+     code = h.compress();
+     cout << "after compress, the code is: " << code << endl;
+     key = h.expand(code);
+    cout <<"after express, the key is: " << key << endl;
     return 0;
 }
