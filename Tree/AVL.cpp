@@ -11,46 +11,46 @@ private:
     T key;
     Node* left;
     Node* right;
-    int height;
-    
-    Node(T k):key(k), left(nullptr), right(nullptr), height(0){ }
-    Node(T k, Node* l, Node* r):key(k), left(l), right(r),height(0){ }
+    int _height;
+
+    Node(T k):key(k), left(nullptr), right(nullptr), _height(1){ }
+    Node(T k, Node* l, Node* r):key(k), left(l), right(r),_height(1){ }
   }* root;
 public:
   AVL():root(nullptr){ }
   ~AVL(){
     //release all resource
   }
-  
+
   void insert(const T& key){
     insert(root, key);
   }
-  
+
   void erase(const T& key){
     Node* x = find(key);
     if(x == nullptr ){ return; }
     root = erase(root, x);
   }
-  
+
   Node* find(const T& key){
       return _find(key);
   }
-  
+
   void TreeOrder(){
     TreeOrder(root);
     printf("\n");
   }
 
-  
+
   int height(){
     return height(root);
   }
 private:
 
   Comp less;
-  
+
   int height(Node* node){
-    if(node != nullptr){ return node->height; }
+    if(node != nullptr){ return node->_height; }
     return 0;
   }
   Node* _find(const T& key){
@@ -66,7 +66,7 @@ private:
       }
       return nullptr;
   }
-  
+
   void TreeOrder(Node* node)
   {
     if(node == nullptr) {return;}
@@ -79,37 +79,37 @@ private:
     Node* l = x->left;
     x->left = l->right;
     l->right = x;
-    
-    x->height = std::max(height(x->left), height(x->right)) + 1;
-    l->height = std::max(height(l->left), x->height) + 1;
-    
+
+    x->_height = std::max(height(x->left), height(x->right)) + 1;
+    l->_height = std::max(height(l->left), x->_height) + 1;
+
     return l;
   }
-  
+
   //second case:RR
   Node* rightrightRotate(Node* x){
     Node* r = x->right;
     x->right = r->left;
     r->left = x;
-    
-    x->height = std::max(height(x->left), height(x->right)) + 1;
-    r->height = std::max(x->height, height(r->right)) + 1;
-    
+
+    x->_height = std::max(height(x->left), height(x->right)) + 1;
+    r->_height = std::max(x->_height, height(r->right)) + 1;
+
     return r;
   }
-  
+
   //third case:LR
   Node* leftrightRotate(Node* x){
     x->left = rightrightRotate(x->left);
     return leftleftRotate(x);
   }
-  
+
   //fourth case:RL
   Node* rightleftRotate(Node* x){
     x->right = leftleftRotate(x->right);
     return rightrightRotate(x);
   }
-  
+
   Node* insert(Node*& treeRoot, const T& key){
     if(treeRoot == nullptr){
       Node* newNode = new Node(key);
@@ -119,39 +119,57 @@ private:
       treeRoot->left = insert(treeRoot->left, key);
       if(height(treeRoot->left) - height(treeRoot->right) == 2){
         if(less(key, treeRoot->left->key)){
-          leftleftRotate(treeRoot);
+          treeRoot = leftleftRotate(treeRoot);
         }else{
-          leftrightRotate(treeRoot);
+          treeRoot = leftrightRotate(treeRoot);
         }
       }
     //  balance(treeRoot);
-    }else if(less(treeRoot->key, key)){
+}else if(less(treeRoot->key, key)){
       treeRoot->right = insert(treeRoot->right, key);
       if(height(treeRoot->right) - height(treeRoot->left) == 2){
-        if(less(key, treeRoot->left->key)){
-          rightleftRotate(treeRoot);
+        if(less(key, treeRoot->right->key)){
+          treeRoot = rightleftRotate(treeRoot);
         }else{
-          rightrightRotate(treeRoot);
+          treeRoot = rightrightRotate(treeRoot);
         }
       }
       //balance(treeRoot);
     }else{
-      
+
     }
-    treeRoot->height = std::max(height(treeRoot->left), height(treeRoot->right)) + 1;
+    treeRoot->_height = std::max(height(treeRoot->left), height(treeRoot->right)) + 1;
+    return treeRoot;
   }
-  
-  Node* erase(Node* treeRoot, Node* x){
+
+  Node* erase(Node*& treeRoot, Node*& x){
     if(treeRoot == nullptr || x == nullptr){
       return nullptr;
     }
-    
+
     if(less(x->key, treeRoot->key)){
         treeRoot->left = erase(treeRoot->left, x);
+
+        if(height(treeRoot->right) - height(treeRoot->left) == 2){
+            Node* rightTree = treeRoot->right;
+            if(height(rightTree->right) > height(rightTree->left)){
+                treeRoot = rightrightRotate(treeRoot);
+            }else{
+                treeRoot = rightleftRotate(treeRoot);
+            }
+        }
     }else if(less(treeRoot->key, x->key)){
         treeRoot->right = erase(treeRoot->right, x);
+
+        if(height(treeRoot->left) - height(treeRoot->right) == 2){
+            Node* leftTree = treeRoot->left;
+            if(height(leftTree->right) > height(leftTree->left)){
+                treeRoot = leftrightRotate(treeRoot);
+            }else{
+                treeRoot = leftleftRotate(treeRoot);
+            }
+        }
     }else{
-      
         if( (treeRoot->left != nullptr) && (treeRoot->right != nullptr) ){
           if(height(treeRoot->left) > height(treeRoot->right)){
             Node* subtree_max = subtreeMax(treeRoot->left);
@@ -168,8 +186,9 @@ private:
           delete tmp;
         }
     }
+    return treeRoot;
   }
-  
+
   Node* subtreeMin(Node *node){
     assert(node != nullptr);
     while( node->left != nullptr ){
@@ -177,7 +196,7 @@ private:
     }
     return node;
   }
-  
+
   Node* subtreeMax(Node *node){
     assert(node != nullptr);
     while( node->right != nullptr ){
@@ -217,9 +236,9 @@ int main()
     cout << "\n== height: " << tree->height() ;
     cout << "\n== order: " ;
     tree->TreeOrder();
-  
 
-  
+
+
 
     return 0;
 }
