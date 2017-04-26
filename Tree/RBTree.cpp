@@ -11,11 +11,11 @@ private:
     T key;
     Node(const T& k):key(k), left(null), right(null)
                     , parent(null), color(BLACk){ }
-                    
+
     Node(const T& k, Node* l, Node* r, Node* p, RBCOLOR c)
-        :key(k), left(l), right(r), parent(p), color(c){}          
+        :key(k), left(l), right(r), parent(p), color(c){}
   }*root;
-  
+
   void leftRotate(Node *x){
       Node* y = x->right;
       if( y != nullptr){
@@ -49,7 +49,7 @@ private:
       x->parent = y;
       if(y != nullptr ) { y->right = x;}
   }
-  
+
   void replace(Node* u, Node* v){
     if ( u->parent == nullptr ) { root = v;}
     else if( u == u->parent->left ) {
@@ -92,7 +92,7 @@ void insertFixUp(Node* n){
   while(current->parent != nullptr && current->parent->color == RED){
     Node* parent = n->parent;
     Node* grandparent = n->parent->parent;
-    
+
     //父节点是祖父节点的左孩子
     if(parent == grandparent->left){
       //case 1:uncle 节点是红色
@@ -104,12 +104,49 @@ void insertFixUp(Node* n){
         current = grandparent;
         continue;
       }
-    }
+
+      //case 2: uncle 节点是黑色，且当前节点是右孩子
+      if(parent->right == node){
+          Node* tmp = nullptr;
+          leftRotate(parent);
+          tmp = parent;
+          parent = current;
+          current = tmp;
+      }
+
+      //case 3: uncle 节点是黑色， 当前节点是左孩子
+      parent->color = BLACK;
+      grandparent->color = RED;
+      rightRotate(grandparent);
+  }else{
+      //case 1:uncle 节点是红色
+      if(uncle == nullptr && uncle->color == RED){
+          uncle->color = BLACK;
+          parent->color = BLACK;
+          grandparent->color = RED;
+          current = grandparent;
+          continue;
+      }
+
+      //case 2:
+      if(parent->left == node){
+          Node* tmp = nullptr;
+          rightRotate(parent);
+          tmp = parent;
+          parent = node;
+          node = tmp;
+      }
+
+      //case 3:
+      parent->color = BLACK;
+      grandparent->color = RED;
+      leftRotate(grandparent);
   }
-  
+  }
+
   //此节点为父节点，将颜色变为黑色
   n->color = BLACK;
-  
+
 }
 public:
   void insert(const T& key){
@@ -139,5 +176,29 @@ public:
 
       newNode->color = RED;
       insertFixUp(newNode);
+  }
+
+  void erase(Node* node){
+      Node* x = find(key);
+      if(x != nullptr){
+
+        if(x->left == nullptr){
+          replace(x, x->right);
+        }else if(x->right == nullptr){
+          replace(x, x->left);
+        }else{
+          Node* z = subtreeMin(x->right);
+          if(z->parent != x){
+            replace(z, z->right);
+            z->right = x->right;
+            z->right->parent = z;
+          }
+          replace(x, z);
+          z->left = x->left;
+          z->left->parent = z;
+
+          z->color = x->color;
+        }
+      }
   }
 };
