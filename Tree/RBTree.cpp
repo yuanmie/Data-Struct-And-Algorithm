@@ -1,16 +1,18 @@
 enum RBCOLOR{RED, BLACK};
-
-template<typename T>
+#include <functional>
+#include <cassert>
+template<typename T, typename Comp = std::less<T> >
 class RBTree{
 private:
+    Comp less;
   struct Node{
     Node* left;
     Node* right;
     Node* parent;
     RBCOLOR color;
     T key;
-    Node(const T& k):key(k), left(null), right(null)
-                    , parent(null), color(BLACk){ }
+    Node(const T& k):key(k), left(nullptr), right(nullptr)
+                    , parent(nullptr), color(BLACK){ }
 
     Node(const T& k, Node* l, Node* r, Node* p, RBCOLOR c)
         :key(k), left(l), right(r), parent(p), color(c){}
@@ -90,73 +92,129 @@ void insertFixUp(Node* n){
   Node* current = n;
   //如果父节点不为空，且父节点的颜色为红色
   while(current->parent != nullptr && current->parent->color == RED){
-    Node* parent = n->parent;
-    Node* grandparent = n->parent->parent;
 
     //父节点是祖父节点的左孩子
-    if(parent == grandparent->left){
+    if(current->parent == current->parent->parent->left){
       //case 1:uncle 节点是红色
-      Node* uncle = grandparent->right;
+      Node* uncle = current->parent->parent->right;
       if(uncle != nullptr && uncle->color == RED){
         uncle->color = BLACK;
-        parent->color = BLACK;
-        grandparent->color = RED;
-        current = grandparent;
+        current->parent->color = BLACK;
+        current->parent->parent->color = RED;
+        current = current->parent->parent;
         continue;
       }
 
       //case 2: uncle 节点是黑色，且当前节点是右孩子
-      if(parent->right == node){
-          Node* tmp = nullptr;
-          leftRotate(parent);
-          tmp = parent;
-          parent = current;
-          current = tmp;
+      if(current == current->parent->right){
+          current = current->parent;
+          leftRotate(current);
       }
 
       //case 3: uncle 节点是黑色， 当前节点是左孩子
-      parent->color = BLACK;
-      grandparent->color = RED;
-      rightRotate(grandparent);
+      current->parent->color = BLACK;
+      current->parent->parent->color = RED;
+      rightRotate(current->parent->parent);
   }else{
+       Node* uncle = current->parent->parent->left;
       //case 1:uncle 节点是红色
-      if(uncle == nullptr && uncle->color == RED){
+      if(uncle != nullptr && uncle->color == RED){
           uncle->color = BLACK;
-          parent->color = BLACK;
-          grandparent->color = RED;
-          current = grandparent;
+          current->parent->color = BLACK;
+          current->parent->parent->color = RED;
+          current = current->parent->parent;
           continue;
       }
 
       //case 2:
-      if(parent->left == node){
-          Node* tmp = nullptr;
-          rightRotate(parent);
-          tmp = parent;
-          parent = node;
-          node = tmp;
+      if(current->parent->left == current){
+         current = current->parent;
+          rightRotate(current);
       }
 
       //case 3:
-      parent->color = BLACK;
-      grandparent->color = RED;
-      leftRotate(grandparent);
+      current->parent->color = BLACK;
+      current->parent->parent->color = RED;
+      leftRotate(current->parent->parent);
   }
   }
 
   //此节点为父节点，将颜色变为黑色
-  n->color = BLACK;
+  root->color = BLACK;
+
+}
+
+void RB_DELETE_FIXUP(Node* x ){
+    while (x != root && (x == nullptr || x->color == BLACK)){
+        if (x == x->parent->left){
+                Node* w = x->parent->right;
+                if ( w != nullptr && w->color == RED){
+                    w->color = BLACK;
+                    x->parent->color = RED;
+                    leftRotate(x->parent);
+                    w = x->parent->right;
+                }
+
+            if (w != nullptr && (w->left == nullptr || w->left->color == BLACK)
+                && (w->right == nullptr || w->right->color == BLACK)){
+                w->color = RED;
+                x = x->parent;
+            }else{
+                 if(w != nullptr && (w->right == nullptr || w->right->color == BLACK)){
+                     w->left->color = BLACK;
+                     w->color = RED;
+                     rightRotate(w);
+                     w = x->parent->right;
+                 }
+
+                 w->color = x->parent->color;
+                 x->parent->color = BLACK;
+                 w->right->color = BLACK;
+                 leftRotate(x->parent);
+                 x = root;
+            }
+        }else{
+            Node* w = x->parent->left;
+            if (w != nullptr && w->color == RED){
+                w->color = BLACK;
+                x->parent->color = RED;
+                rightRotate(x->parent);
+                w = x->parent->left;
+            }
+
+            if (w != nullptr && (w->left == nullptr || w->left->color == BLACK) && (w->right == nullptr || w->right->color == BLACK)){
+                w->color = RED;
+                x = x->parent;
+            }else{
+             if(w != nullptr && (w->left == nullptr || w->left->color == BLACK)){
+                 w->right->color = BLACK;
+                 w->color = RED;
+                 leftRotate(w);
+                 w = x->parent->left;
+             }
+
+             w->color = x->parent->color;
+             x->parent->color = BLACK;
+             w->left->color = BLACK;
+             rightRotate(x->parent);
+             x = root;
+            }
+        }
+    }
+    if(x != nullptr ){ x->color = BLACK; }
 
 }
 public:
-  void insert(const T& key){
+    RBTree():root(nullptr){}
+
+    void insert(const T& key){
       Node* current = root;
       Node* p = nullptr;
 
       while( current != nullptr ){
           p = current;
           // key less than curent's key
-          if( comp(key, current->key) ){
+          if( less(key, current->key) ){
               current = current->left;
           }else{
               current = current->right;
@@ -168,7 +226,7 @@ public:
 
       if( p == nullptr ){
           root = newNode;
-      }else if( comp(key, p->key) ){
+      }else if( less(key, p->key) ){
           p->left = newNode;
       }else{
           p->right = newNode;
@@ -178,16 +236,22 @@ public:
       insertFixUp(newNode);
   }
 
-  void erase(Node* node){
+  void erase(const T& key){
       Node* x = find(key);
+      RBCOLOR originColor = x->color;
+      Node* fixNode = nullptr;
       if(x != nullptr){
 
         if(x->left == nullptr){
+            fixNode = x->right;
           replace(x, x->right);
         }else if(x->right == nullptr){
+            fixNode = x->left;
           replace(x, x->left);
         }else{
           Node* z = subtreeMin(x->right);
+          fixNode = z->right;
+          originColor = z->color;
           if(z->parent != x){
             replace(z, z->right);
             z->right = x->right;
@@ -200,5 +264,61 @@ public:
           z->color = x->color;
         }
       }
+
+      if (originColor == BLACK){
+          RB_DELETE_FIXUP(fixNode);
+      }
+  }
+
+  Node* find(const T& key){
+      Node* current = root;
+      while( current != nullptr){
+          if (less(key, current->key)){
+              current = current->left;
+          }else if(less(current->key, key)){
+              current = current->right;
+          }else{
+              return current;
+          }
+      }
+      return nullptr;
+  }
+
+  void TreeOrder(){
+    TreeOrder(root);
+    printf("\n");
+  }
+  void TreeOrder(Node* node)
+  {
+      if(node == NULL) {return;}
+    printf("\t%d(%d)", node->key, node->color);
+      TreeOrder(node->left);
+      TreeOrder(node->right);
   }
 };
+
+int main(){
+    RBTree<int> s;
+    s.insert(11);
+    s.TreeOrder();
+    s.insert(14);
+    s.TreeOrder();
+    s.insert(15);
+    s.TreeOrder();
+    s.insert(2);
+    s.TreeOrder();
+    s.insert(1);
+    s.TreeOrder();
+    s.insert(8);
+    s.TreeOrder();
+    s.insert(5);
+    s.TreeOrder();
+    s.insert(4);
+    s.TreeOrder();
+    s.insert(1);
+    s.TreeOrder();
+    s.erase(5);
+    s.TreeOrder();
+
+    return 0;
+}
