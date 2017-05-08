@@ -144,60 +144,90 @@ void insertFixUp(Node* n){
 
 }
 
-void RB_DELETE_FIXUP(Node* x ){
+void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
     while (x != root && (x == nullptr || x->color == BLACK)){
-        if (x == x->parent->left){
-                Node* w = x->parent->right;
+        if(x != nullptr){
+            isLeftChild = (x == x->parent->left);
+        }
+        if (isLeftChild){
+            Node* w = nullptr;
+            x_parent = (x == nullptr ) ? x_parent : x->parent;
+                if(x != nullptr ){
+                    w = x->parent->right;
+                }else{
+                    w = x_parent->right;
+                }
                 if ( w != nullptr && w->color == RED){
                     w->color = BLACK;
-                    x->parent->color = RED;
-                    leftRotate(x->parent);
-                    w = x->parent->right;
+                    x_parent->color = RED;
+                    leftRotate(x_parent);
+                    //旋转可能改变x的值，需要更新一下
+                    x_parent = (x == nullptr ) ? x_parent : x->parent;
+                    w = x_parent->right;
                 }
 
             if (w != nullptr && (w->left == nullptr || w->left->color == BLACK)
                 && (w->right == nullptr || w->right->color == BLACK)){
                 w->color = RED;
-                x = x->parent;
+                x_parent = (x == nullptr ) ? x_parent : x->parent;
+                x = x_parent;
             }else{
                  if(w != nullptr && (w->right == nullptr || w->right->color == BLACK)){
-                     w->left->color = BLACK;
+                     if (w->left != nullptr ) w->left->color = BLACK;
                      w->color = RED;
                      rightRotate(w);
-                     w = x->parent->right;
+                     x_parent = (x == nullptr ) ? x_parent : x->parent;
+                     w = x_parent->right;
                  }
+                 x_parent = (x == nullptr ) ? x_parent : x->parent;
+                 if (w != nullptr ) {
+                     w->color = x_parent->color;
+                     if(w->right != nullptr ) w->right->color = BLACK;
+                 }
+                 x_parent->color = BLACK;
 
-                 w->color = x->parent->color;
-                 x->parent->color = BLACK;
-                 w->right->color = BLACK;
-                 leftRotate(x->parent);
+                 leftRotate(x_parent);
                  x = root;
             }
         }else{
-            Node* w = x->parent->left;
-            if (w != nullptr && w->color == RED){
-                w->color = BLACK;
-                x->parent->color = RED;
-                rightRotate(x->parent);
-                w = x->parent->left;
-            }
+            Node* w = nullptr;
+            x_parent = (x == nullptr ) ? x_parent : x->parent;
+                if(x != nullptr ){
+                    w = x->parent->left;
+                }else{
+                    w = x_parent->left;
+                }
+                if ( w != nullptr && w->color == RED){
+                    w->color = BLACK;
+                    x_parent->color = RED;
+                    rightRotate(x_parent);
+                    //旋转可能改变x的值，需要更新一下
+                    x_parent = (x == nullptr ) ? x_parent : x->parent;
+                    w = x_parent->left;
+                }
 
-            if (w != nullptr && (w->left == nullptr || w->left->color == BLACK) && (w->right == nullptr || w->right->color == BLACK)){
+            if (w != nullptr && (w->left == nullptr || w->left->color == BLACK)
+                && (w->right == nullptr || w->right->color == BLACK)){
                 w->color = RED;
-                x = x->parent;
+                x_parent = (x == nullptr ) ? x_parent : x->parent;
+                x = x_parent;
             }else{
-             if(w != nullptr && (w->left == nullptr || w->left->color == BLACK)){
-                 w->right->color = BLACK;
-                 w->color = RED;
-                 leftRotate(w);
-                 w = x->parent->left;
-             }
+                 if(w != nullptr && (w->left == nullptr || w->left->color == BLACK)){
+                     if (w->right != nullptr ) w->right->color = BLACK;
+                     w->color = RED;
+                     leftRotate(w);
+                     x_parent = (x == nullptr ) ? x_parent : x->parent;
+                     w = x_parent->left;
+                 }
+                 x_parent = (x == nullptr ) ? x_parent : x->parent;
+                 if (w != nullptr ) {
+                     w->color = x_parent->color;
+                     if(w->left != nullptr ) w->left->color = BLACK;
+                 }
+                 x_parent->color = BLACK;
 
-             w->color = x->parent->color;
-             x->parent->color = BLACK;
-             w->left->color = BLACK;
-             rightRotate(x->parent);
-             x = root;
+                 rightRotate(x_parent);
+                 x = root;
             }
         }
     }
@@ -238,24 +268,70 @@ public:
 
   void erase(const T& key){
       Node* x = find(key);
+      Node* x_parent = nullptr;
       RBCOLOR originColor = x->color;
       Node* fixNode = nullptr;
+      bool isLeftChild  = true;
       if(x != nullptr){
 
         if(x->left == nullptr){
+            x_parent = x->parent; //处理孩子节点为nullptr的情况
             fixNode = x->right;
+
+            if(x_parent == nullptr ){
+                root = fixNode;
+            }else{
+                if(x_parent->left == x) {
+                    isLeftChild = true;
+                }
+                else {
+                    isLeftChild = false;
+                }
+            }
           replace(x, x->right);
         }else if(x->right == nullptr){
+            x_parent = x->parent; //处理孩子节点为nullptr的情况
             fixNode = x->left;
+
+            if(x_parent == nullptr ){
+                root = fixNode;
+            }else{
+                if(x_parent->left == x) {
+                    isLeftChild = true;
+
+                }
+                else {
+                    isLeftChild = false;
+
+                }
+            }
+
           replace(x, x->left);
         }else{
           Node* z = subtreeMin(x->right);
           fixNode = z->right;
+          x_parent = z->parent; //处理孩子节点为nullptr的情况
+
+          if(x_parent == nullptr ){
+              root = fixNode;
+          }else{
+              if(x_parent->left == z) {
+                  isLeftChild = true;
+
+              }
+              else {
+                  isLeftChild = false;
+
+              }
+          }
           originColor = z->color;
           if(z->parent != x){
             replace(z, z->right);
             z->right = x->right;
             z->right->parent = z;
+          }
+          if(z->parent == x) {
+              x_parent = z;
           }
           replace(x, z);
           z->left = x->left;
@@ -266,7 +342,7 @@ public:
       }
 
       if (originColor == BLACK){
-          RB_DELETE_FIXUP(fixNode);
+          RB_DELETE_FIXUP(fixNode, x_parent, isLeftChild);
       }
   }
 
@@ -317,8 +393,25 @@ int main(){
     s.TreeOrder();
     s.insert(1);
     s.TreeOrder();
+    // s.erase(11);
+    // s.TreeOrder();
+    s.erase(1);
+    s.TreeOrder();
+    s.erase(1);
+    s.TreeOrder();
+    s.erase(4);
+    s.TreeOrder();
+    s.erase(8);
+    s.TreeOrder();
+    s.erase(11);
+    s.TreeOrder();
+    s.erase(14);
+    s.TreeOrder();
     s.erase(5);
     s.TreeOrder();
-
+    s.erase(15);
+    s.TreeOrder();
+    s.erase(2);
+    s.TreeOrder();
     return 0;
 }
