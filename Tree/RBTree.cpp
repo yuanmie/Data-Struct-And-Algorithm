@@ -1,10 +1,21 @@
-enum RBCOLOR{RED, BLACK};
+/*
+red-black tree, 中文为红黑树, 一种平衡二叉搜索树
+时间复杂度：
+insert操作：log(n)
+delete操作： log(n)
+find操作：log(n)
+参考算法导论实现， 没有用哨兵节点
+*/
 #include <functional>
 #include <cassert>
+
+//定义红黑树节点的2中状态
+enum RBCOLOR{RED, BLACK};
+
 template<typename T, typename Comp = std::less<T> >
 class RBTree{
 private:
-    Comp less;
+    Comp less; //比较函数，默认是小于
   struct Node{
     Node* left;
     Node* right;
@@ -18,8 +29,10 @@ private:
         :key(k), left(l), right(r), parent(p), color(c){}
   }*root;
 
+//左旋操作
   void leftRotate(Node *x){
       Node* y = x->right;
+
       if( y != nullptr){
           x->right = y->left;
           if(y->left != nullptr){ y->left->parent = x;}
@@ -34,8 +47,10 @@ private:
       if(y != nullptr ) { y->left = x;}
   }
 
+//右旋操作
   void rightRotate(Node* x){
       Node *y = x->left;
+
       if( y != nullptr ){
           x->left = y->right;
           if ( y->right != nullptr ) {
@@ -52,6 +67,7 @@ private:
       if(y != nullptr ) { y->right = x;}
   }
 
+//替换操作，用v取代u
   void replace(Node* u, Node* v){
     if ( u->parent == nullptr ) { root = v;}
     else if( u == u->parent->left ) {
@@ -64,7 +80,7 @@ private:
         v->parent = u->parent;
     }
   }
-
+//查找子树中最小的节点
 Node* subtreeMin(Node *node){
   assert(node != nullptr);
   while( node->left != nullptr ){
@@ -73,6 +89,7 @@ Node* subtreeMin(Node *node){
   return node;
 }
 
+//查找子树中最大的节点
 Node* subtreeMax(Node *node){
   assert(node != nullptr);
   while( node->right != nullptr ){
@@ -81,6 +98,7 @@ Node* subtreeMax(Node *node){
   return node;
 }
 
+//释放树占用的资源
 void releaseTree(Node* node){
   if(node == NULL) return;
   releaseTree(node->left);
@@ -88,6 +106,7 @@ void releaseTree(Node* node){
   delete node;
 }
 
+//insert操作所需的平衡操作
 void insertFixUp(Node* n){
   Node* current = n;
   //如果父节点不为空，且父节点的颜色为红色
@@ -126,13 +145,13 @@ void insertFixUp(Node* n){
           continue;
       }
 
-      //case 2:
+       //case 2: uncle 节点是黑色，且当前节点是左孩子
       if(current->parent->left == current){
          current = current->parent;
           rightRotate(current);
       }
 
-      //case 3:
+     //case 3: uncle 节点是黑色， 当前节点是右孩子
       current->parent->color = BLACK;
       current->parent->parent->color = RED;
       leftRotate(current->parent->parent);
@@ -144,19 +163,27 @@ void insertFixUp(Node* n){
 
 }
 
+/*删除操作所需的平衡操作
+比较麻烦的情况是x为空的情况，故需要做一些处理。在下面的注释中说明
+*/
 void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
     while (x != root && (x == nullptr || x->color == BLACK)){
+        //判断x是否为左孩子节点
         if(x != nullptr){
             isLeftChild = (x == x->parent->left);
         }
+        //x为左孩子
         if (isLeftChild){
             Node* w = nullptr;
+            //设置x_parent 的值
             x_parent = (x == nullptr ) ? x_parent : x->parent;
+            //取得uncle节点
                 if(x != nullptr ){
                     w = x->parent->right;
                 }else{
                     w = x_parent->right;
                 }
+                //case 1：uncle节点的颜色为红色
                 if ( w != nullptr && w->color == RED){
                     w->color = BLACK;
                     x_parent->color = RED;
@@ -166,12 +193,14 @@ void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
                     w = x_parent->right;
                 }
 
+                //case 2： uncle节点的左孩子节点和右孩子节点为黑色（空节点的颜色为黑色）
             if (w != nullptr && (w->left == nullptr || w->left->color == BLACK)
                 && (w->right == nullptr || w->right->color == BLACK)){
                 w->color = RED;
                 x_parent = (x == nullptr ) ? x_parent : x->parent;
                 x = x_parent;
             }else{
+                //case 3: uncle节点的右孩子节点的颜色为黑色
                  if(w != nullptr && (w->right == nullptr || w->right->color == BLACK)){
                      if (w->left != nullptr ) w->left->color = BLACK;
                      w->color = RED;
@@ -179,6 +208,7 @@ void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
                      x_parent = (x == nullptr ) ? x_parent : x->parent;
                      w = x_parent->right;
                  }
+                 //case 4:uncle节点是黑色的， 且w的右孩子节点为红色的
                  x_parent = (x == nullptr ) ? x_parent : x->parent;
                  if (w != nullptr ) {
                      w->color = x_parent->color;
@@ -190,6 +220,7 @@ void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
                  x = root;
             }
         }else{
+            //x为右孩子节点。交换上面代码的left和right即可
             Node* w = nullptr;
             x_parent = (x == nullptr ) ? x_parent : x->parent;
                 if(x != nullptr ){
@@ -197,6 +228,7 @@ void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
                 }else{
                     w = x_parent->left;
                 }
+                //case 1：uncle节点的颜色为红色
                 if ( w != nullptr && w->color == RED){
                     w->color = BLACK;
                     x_parent->color = RED;
@@ -206,12 +238,14 @@ void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
                     w = x_parent->left;
                 }
 
+//case 2： uncle节点的左孩子节点和右孩子节点为黑色（空节点的颜色为黑色）
             if (w != nullptr && (w->left == nullptr || w->left->color == BLACK)
                 && (w->right == nullptr || w->right->color == BLACK)){
                 w->color = RED;
                 x_parent = (x == nullptr ) ? x_parent : x->parent;
                 x = x_parent;
             }else{
+                //case 3: uncle节点的左孩子节点的颜色为黑色
                  if(w != nullptr && (w->left == nullptr || w->left->color == BLACK)){
                      if (w->right != nullptr ) w->right->color = BLACK;
                      w->color = RED;
@@ -219,6 +253,7 @@ void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
                      x_parent = (x == nullptr ) ? x_parent : x->parent;
                      w = x_parent->left;
                  }
+                 //case 4:uncle节点是黑色的， 且w的右孩子节点为红色的
                  x_parent = (x == nullptr ) ? x_parent : x->parent;
                  if (w != nullptr ) {
                      w->color = x_parent->color;
@@ -237,13 +272,14 @@ void RB_DELETE_FIXUP(Node* x, Node* x_parent, bool isLeftChild){
 public:
     RBTree():root(nullptr){}
 
+    //插入操作
     void insert(const T& key){
       Node* current = root;
       Node* p = nullptr;
 
       while( current != nullptr ){
           p = current;
-          // key less than curent's key
+          // 插入的键值比当前节点小，进入左子树
           if( less(key, current->key) ){
               current = current->left;
           }else{
@@ -266,18 +302,20 @@ public:
       insertFixUp(newNode);
   }
 
+//删除操作
   void erase(const T& key){
       Node* x = find(key);
       Node* x_parent = nullptr;
-      RBCOLOR originColor = x->color;
+      RBCOLOR originColor = RED;
       Node* fixNode = nullptr;
       bool isLeftChild  = true;
       if(x != nullptr){
-
+          originColor = x->color;
         if(x->left == nullptr){
             x_parent = x->parent; //处理孩子节点为nullptr的情况
             fixNode = x->right;
 
+            //因为没有使用哨兵节点，需要对fixnode为空的情况进行处理
             if(x_parent == nullptr ){
                 root = fixNode;
             }else{
@@ -293,16 +331,15 @@ public:
             x_parent = x->parent; //处理孩子节点为nullptr的情况
             fixNode = x->left;
 
+            //因为没有使用哨兵节点，需要对fixnode为空的情况进行处理
             if(x_parent == nullptr ){
                 root = fixNode;
             }else{
                 if(x_parent->left == x) {
                     isLeftChild = true;
-
                 }
                 else {
                     isLeftChild = false;
-
                 }
             }
 
@@ -312,6 +349,7 @@ public:
           fixNode = z->right;
           x_parent = z->parent; //处理孩子节点为nullptr的情况
 
+          //因为没有使用哨兵节点，需要对fixnode为空的情况进行处理
           if(x_parent == nullptr ){
               root = fixNode;
           }else{
@@ -330,6 +368,7 @@ public:
             z->right = x->right;
             z->right->parent = z;
           }
+          //特殊情况，fixNode 为空，x_parent指向被删除节点
           if(z->parent == x) {
               x_parent = z;
           }
@@ -339,6 +378,9 @@ public:
 
           z->color = x->color;
         }
+
+        //释放被删除节点的资源
+        delete x;
       }
 
       if (originColor == BLACK){
